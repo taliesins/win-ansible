@@ -27,4 +27,4 @@ echo "rpath=/usr/lib" >> ~/.pydistutils.cfg
 cd /lib/python2.7/site-packages/
 python easy_install.py pip
 cd /tmp
-pip install --global-option=build_ext --global-option="-I/usr/include" --global-option="-I/usr/include/python2.7" --global-option="-L/usr/lib/" ansible
+pip install --global-option=build_ext --global-option="-I/usr/include" --global-option="-I/usr/include/python2.7" --global-option="-L/usr/lib/" "pywinrm>=0.1.1" kerberos requests_kerberos ansible

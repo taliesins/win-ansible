@@ -26,7 +26,7 @@ if (!(Test-Path $cygWinPath)){
 	$client.DownloadFile($cygWinUrl, $cygWinPath)
 }
 
-$arguments = "--quiet-mode  --no-admin --no-desktop --no-shortcuts --no-startmenu --disable-buggy-antivirus --site $mirrorUrl --root $rootPath --local-package-dir $packagesPath --packages coreutils,libattr1,inutils,curl,libgmp-devel,make,python-devel,python-crypto,python-openssl,python-setuptools,nano,openssl,openssl-devel,libffi-devel,wget,gcc-g++,make,diffutils,libmpfr-devel,libmpc-devel"
+$arguments = "--quiet-mode  --no-admin --no-desktop --no-shortcuts --no-startmenu --disable-buggy-antivirus --site $mirrorUrl --root $rootPath --local-package-dir $packagesPath --packages coreutils,libattr1,inutils,curl,libgmp-devel,make,python-devel,python-crypto,python-openssl,python-setuptools,nano,openssl,openssl-devel,libffi-devel,wget,gcc-g++,make,diffutils,libmpfr-devel,libmpc-devel,git,openssh,libkrb5-devel,krb5-workstation"
 Write-Host "install cygwin with: $arguments"
 
 $p = Start-Process -Wait -NoNewWindow -PassThru -FilePath $cygWinPath -ArgumentList $arguments
@@ -41,20 +41,32 @@ mkdir -f $rootPath\shim
 
 $playBookShim = @"
 @echo off
-set CYGWIN=$rootPath
+set CYGWIN=c:\cygwin64
 set SH=%CYGWIN%\bin\bash.exe
-"%SH%" -c "/usr/local/bin/ansible-winpath-playbook.sh %*"
+"%SH%" -c "/usr/local/bin/ansible-winpath-playbook.sh '%cd%' %*"
 "@
 
 Set-Content -Path $rootPath\shim\ansible-playbook.bat -Value $playBookShim
 
 $winPathPlayBookShim = @"
 #!/bin/bash
-PARAMS="`$@"
-WINDOWS_HOME_PATH="`cygpath ~ -w`"
+ANSIBLE=/opt/ansible
+PATH=/bin:$PATH:$ANSIBLE/bin
+PYTHONPATH=$ANSIBLE/lib:
+ANSIBLE_LIBRARY=$ANSIBLE/library
+C_INCLUDE_PATH=/usr/include:/usr/include/python2.7:$C_INCLUDE_PATH
+C_PLUS_INCLUDE_PATH=/usr/include:/usr/include/python2.7:$C_PLUS_INCLUDE_PATH
+LIBRARY_PATH=/usr/lib:$LIBRARY_PATH
+LD_LIBRARY_PATH=/usr/lib:$LD_LIBRARY_PATH
+
+cd `cygpath $1 -a`
+shift
+PARAMS="$@"
+WINDOWS_HOME_PATH="cygpath ~ -w"
 # regex your user path to UNIX style path otherwise ansible fails
-PARAMS_LINUX=`${PARAMS/$WINDOWS_HOME_PATH/~}
-echo "$PARAMS_LINUX"
+PARAMS_LINUX=${PARAMS//~}
+echo "pwd = `pwd`"
+echo "/bin/ansible-playbook $PARAMS_LINUX"
 /bin/ansible-playbook $PARAMS_LINUX
 "@
 
