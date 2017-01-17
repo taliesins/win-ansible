@@ -73,7 +73,7 @@ echo "/bin/ansible-playbook `$PARAMS_LINUX"
 $winPathPlayBookShimPath = "$rootPath\usr\local\bin\ansible-winpath-playbook.sh"
 [IO.File]::WriteAllText($winPathPlayBookShimPath, $winPathPlayBookShim)
 
-$AdController = $env:LOGONSERVER -replace “\\”, “”
+$AdController = $env:LOGONSERVER -replace "\\", ""
 
 if ($AdController) {
 	$Domain = (Get-WmiObject Win32_ComputerSystem).Domain.ToUpper()
