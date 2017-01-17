@@ -36,3 +36,26 @@ if ($p.ExitCode -ne 0) {
 }
 
 &$rootPath\bin\bash.exe $scriptPath\ansible.sh 
+
+mkdir -f $rootPath\shim
+
+$playBookShim = @"
+@echo off
+set CYGWIN=$rootPath
+set SH=%CYGWIN%\bin\bash.exe
+"%SH%" -c "/usr/local/bin/ansible-winpath-playbook.sh %*"
+"@
+
+Set-Content -Path $rootPath\shim\ansible-playbook.bat -Value $playBookShim
+
+$winPathPlayBookShim = @"
+#!/bin/bash
+PARAMS="`$@"
+WINDOWS_HOME_PATH="`cygpath ~ -w`"
+# regex your user path to UNIX style path otherwise ansible fails
+PARAMS_LINUX=`${PARAMS/$WINDOWS_HOME_PATH/~}
+echo "$PARAMS_LINUX"
+/bin/ansible-playbook $PARAMS_LINUX
+"@
+
+Set-Content -Path $rootPath\usr\local\bin\ansible-winpath-playbook.sh -Value $winPathPlayBookShim
