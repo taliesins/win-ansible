@@ -51,23 +51,59 @@ Set-Content -Path $rootPath\shim\ansible-playbook.bat -Value $playBookShim
 $winPathPlayBookShim = @"
 #!/bin/bash
 ANSIBLE=/opt/ansible
-PATH=/bin:$PATH:$ANSIBLE/bin
-PYTHONPATH=$ANSIBLE/lib:
-ANSIBLE_LIBRARY=$ANSIBLE/library
-C_INCLUDE_PATH=/usr/include:/usr/include/python2.7:$C_INCLUDE_PATH
-C_PLUS_INCLUDE_PATH=/usr/include:/usr/include/python2.7:$C_PLUS_INCLUDE_PATH
-LIBRARY_PATH=/usr/lib:$LIBRARY_PATH
-LD_LIBRARY_PATH=/usr/lib:$LD_LIBRARY_PATH
+PATH=/bin:`$PATH:`$ANSIBLE/bin
+PYTHONPATH=`$ANSIBLE/lib:
+ANSIBLE_LIBRARY=`$ANSIBLE/library
+C_INCLUDE_PATH=/usr/include:/usr/include/python2.7:`$C_INCLUDE_PATH
+C_PLUS_INCLUDE_PATH=/usr/include:/usr/include/python2.7:`$C_PLUS_INCLUDE_PATH
+LIBRARY_PATH=/usr/lib:`$LIBRARY_PATH
+LD_LIBRARY_PATH=/usr/lib:`$LD_LIBRARY_PATH
 
-cd `cygpath $1 -a`
+cd `cygpath `$1 -a`
 shift
-PARAMS="$@"
+PARAMS="`$@"
 WINDOWS_HOME_PATH="cygpath ~ -w"
 # regex your user path to UNIX style path otherwise ansible fails
-PARAMS_LINUX=${PARAMS//~}
+PARAMS_LINUX=`${PARAMS//~}
 echo "pwd = `pwd`"
-echo "/bin/ansible-playbook $PARAMS_LINUX"
-/bin/ansible-playbook $PARAMS_LINUX
-"@
+echo "/bin/ansible-playbook `$PARAMS_LINUX"
+/bin/ansible-playbook `$PARAMS_LINUX
+"@ -replace "`r`n", "`n"
 
-Set-Content -Path $rootPath\usr\local\bin\ansible-winpath-playbook.sh -Value $winPathPlayBookShim
+$winPathPlayBookShimPath = "$rootPath\usr\local\bin\ansible-winpath-playbook.sh"
+[IO.File]::WriteAllText($winPathPlayBookShimPath, $winPathPlayBookShim)
+
+$AdController = $env:LOGONSERVER -replace “\\”, “”
+
+if ($AdController) {
+	$Domain = (Get-WmiObject Win32_ComputerSystem).Domain.ToUpper()
+	
+	if ($Domain){
+		$Krb5Conf = @"
+[logging]
+	default = FILE:/var/log/krb5libs.log
+	kdc = FILE:/var/log/krb5kdc.log
+	admin_server = FILE:/var/log/kadmind.log
+
+[libdefaults]
+	default_realm = $($Domain)
+	dns_lookup_realm = true
+	dns_lookup_kdc = true
+	ticket_lifetime = 24h
+	renew_lifetime = 7d
+	forwardable = true
+ 
+[realms]
+	$($Domain) = {
+		kdc = $($AdController).$($Domain.ToLower())
+	}
+
+[domain_realm]
+	.$($Domain.ToLower()) = $($Domain)
+	$($Domain.ToLower()) = $($Domain)
+"@ -replace "`r`n", "`n"
+		
+		$Krb5ConfPath = "$rootPath\etc\krb5.conf"
+		[IO.File]::WriteAllText($Krb5ConfPath, $Krb5Conf)
+	}
+}
