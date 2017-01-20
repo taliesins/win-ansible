@@ -37,18 +37,14 @@ if ($p.ExitCode -ne 0) {
 
 &$rootPath\bin\bash.exe $scriptPath\ansible.sh 
 
-mkdir -f $rootPath\shim
-
-$playBookShim = @"
+$shim=@"
 @echo off
-set CYGWIN=c:\cygwin64
+set CYGWIN=$rootPath
 set SH=%CYGWIN%\bin\bash.exe
-"%SH%" -c "/usr/local/bin/ansible-winpath-playbook.sh '%cd%' %*"
+"%SH%" -c "{{CMD_PATH}} '%cd%' %*"
 "@
 
-Set-Content -Path $rootPath\shim\ansible-playbook.bat -Value $playBookShim
-
-$winPathPlayBookShim = @"
+$winShim=@"
 #!/bin/bash
 ANSIBLE=/opt/ansible
 PATH=/bin:`$PATH:`$ANSIBLE/bin
@@ -59,19 +55,30 @@ C_PLUS_INCLUDE_PATH=/usr/include:/usr/include/python2.7:`$C_PLUS_INCLUDE_PATH
 LIBRARY_PATH=/usr/lib:`$LIBRARY_PATH
 LD_LIBRARY_PATH=/usr/lib:`$LD_LIBRARY_PATH
 
-cd `cygpath `$1 -a`
+cd ``cygpath `$1 -a``
 shift
 PARAMS="`$@"
 WINDOWS_HOME_PATH="cygpath ~ -w"
 # regex your user path to UNIX style path otherwise ansible fails
 PARAMS_LINUX=`${PARAMS//~}
-echo "pwd = `pwd`"
-echo "/bin/ansible-playbook `$PARAMS_LINUX"
-/bin/ansible-playbook `$PARAMS_LINUX
-"@ -replace "`r`n", "`n"
+echo "pwd = ``pwd``"
+echo "{{CMD_PATH}} `$PARAMS_LINUX"
+{{CMD_PATH}} `$PARAMS_LINUX
+"@
 
-$winPathPlayBookShimPath = "$rootPath\usr\local\bin\ansible-winpath-playbook.sh"
-[IO.File]::WriteAllText($winPathPlayBookShimPath, $winPathPlayBookShim)
+mkdir -f $rootPath\shim
+
+"ansible", "ansible-console", "ansible-doc", "ansible-galaxy", "ansible-playbook", "ansible-pull", "ansible-vault" | %{
+	$command = $_
+	
+	$commandShim = $shim.Replace("{{CMD_PATH}}", "/usr/local/bin/winpath-$($command).sh")
+	$commandShimPath = "$rootPath\shim\$($command).bat"
+	[IO.File]::WriteAllText($commandShimPath, $commandShim)	
+
+	$winPathCommandShim = $winShim.Replace("{{CMD_PATH}}", "/bin/$command")
+	$winPathCommandShimPath = "$rootPath\usr\local\bin\winpath-$($command).sh"
+	[IO.File]::WriteAllText($winPathCommandShimPath, $winPathCommandShim)	
+}
 
 $AdController = $env:LOGONSERVER -replace "\\", ""
 
