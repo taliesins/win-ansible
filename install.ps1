@@ -41,7 +41,14 @@ $shim=@"
 @echo off
 set CYGWIN=$rootPath
 set SH=%CYGWIN%\bin\bash.exe
-"%SH%" -c "{{CMD_PATH}} '%cd%' %*"
+
+REM Ugly quotations support patch
+set v_params=%*
+set v_params=%v_params:"--=--%
+set v_params=%v_params:"}"="}%
+set v_params=%v_params:"=\\\"%
+
+"%SH%" -c "{{CMD_PATH}} '%cd%' %v_params%"
 "@
 
 $winShim=@"
@@ -57,10 +64,105 @@ LD_LIBRARY_PATH=/usr/lib:`$LD_LIBRARY_PATH
 
 cd ``cygpath `$1 -a``
 shift
-PARAMS="`$@"
+
 WINDOWS_HOME_PATH="cygpath ~ -w"
+PARAMS="`$@"
+
+pathfixer(){
+  if [ "`$2" == "" ]; then
+    eval "`$1='`$2'"
+  elif [[ "`$2" == *":"* ]]; then
+    eval "`$1=``cygpath `$2``"
+  else
+    LongestMatch=""
+    RelativePath="";
+    IFS="/" read -ra line <<< "`$2";
+    let x=`${#line[@]}-1; 
+    while [ "`$x" -ge 0 ]; do 
+      if [ "`$RelativePath" == "" ]; then
+        RelativePath="`${line[`$x]}";
+      else
+        RelativePath="`${line[`$x]}/`$RelativePath";
+      fi
+  
+      if [ -f "`$RelativePath" ] || [ -d "`$RelativePath" ]; then
+        LongestMatch="`$RelativePath";
+      fi
+  
+      let x--;  
+    done
+
+    if [ "`$LongestMatch" != "" ]; then
+      eval "`$1='`$(PWD)/`$LongestMatch'"
+    else
+      eval "`$1='`$2'"
+    fi
+  fi
+}
+
+# Disable ControlMaster, as it's not working on Windows
+if [ "`$ANSIBLE_SSH_ARGS" != "" ]; then
+  ANSIBLE_SSH_ARGS=``echo `$ANSIBLE_SSH_ARGS | sed -E "s|ControlMaster=([^ ]*)|ControlMaster=no|"``
+  ANSIBLE_SSH_ARGS=``echo `$ANSIBLE_SSH_ARGS | sed -E "s|-o ControlPersist=([^ ]*)||"``
+  export ANSIBLE_SSH_ARGS=`$ANSIBLE_SSH_ARGS
+fi
+
+# Fix environment variable path set by vagrant on Windows
+if [ "`$ANSIBLE_ROLES_PATH" != "" ]; then
+    ANSIBLE_ROLES_PATH_FIXED="`$ANSIBLE_ROLES_PATH"
+    pathfixer ANSIBLE_ROLES_PATH_FIXED `$ANSIBLE_ROLES_PATH_FIXED
+    if [ "`$ANSIBLE_ROLES_PATH" != "`$ANSIBLE_ROLES_PATH_FIXED" ]; then
+      export ANSIBLE_ROLES_PATH="`$ANSIBLE_ROLES_PATH_FIXED"
+    fi
+fi
+
+if [ "`$ANSIBLE_CONFIG" != "" ]; then
+    ANSIBLE_CONFIG_FIXED="`$ANSIBLE_CONFIG"
+    pathfixer ANSIBLE_CONFIG_FIXED `$ANSIBLE_CONFIG_FIXED
+    if [ "`$ANSIBLE_CONFIG" != "`$ANSIBLE_CONFIG_FIXED" ]; then
+      export ANSIBLE_CONFIG="`$ANSIBLE_CONFIG_FIXED"
+    fi
+fi
+
+# Fix parameters passed by vagrant on Windows
+if [[ `$PARAMS == *"inventory-file"* ]]; then
+  INVENTORY_FILE=``echo `$PARAMS | sed -E 's/.*--inventory-file\s*=\s*[\x27"]?([^\x27" ]*)[\x27"]?.*/\1/'``
+  if [ "`$INVENTORY_FILE" != "" ]; then
+    INVENTORY_FILE_FIXED="`$INVENTORY_FILE"
+    pathfixer INVENTORY_FILE_FIXED `$INVENTORY_FILE_FIXED
+    if [ "`$INVENTORY_FILE" != "`$INVENTORY_FILE_FIXED" ]; then
+      PARAMS=`${PARAMS//`$INVENTORY_FILE/`$INVENTORY_FILE_FIXED}
+    fi
+  fi
+fi
+
+if [[ `$PARAMS == *"role-file"* ]]; then
+  ROLE_FILE=``echo `$PARAMS | sed -E 's/.*--role-file\s*=\s*[\x27"]?([^\x27" ]*)[\x27"]?.*/\1/'``
+  if [ "`$ROLE_FILE" != "" ]; then
+    ROLE_FILE_FIXED="`$ROLE_FILE"
+    pathfixer ROLE_FILE_FIXED `$ROLE_FILE_FIXED
+    echo "ROLE_FILE=`$ROLE_FILE"
+    echo "ROLE_FILE_FIXED=`$ROLE_FILE_FIXED"
+    if [ "`$ROLE_FILE" != "`$ROLE_FILE_FIXED" ]; then
+      PARAMS=`${PARAMS//`$ROLE_FILE/`$ROLE_FILE_FIXED}
+    fi
+  fi  
+fi
+
+if [[ `$PARAMS == *"roles-path"* ]]; then
+  ROLES_PATH=``echo `$PARAMS | sed -E 's/.*--roles-path\s*=\s*[\x27"]?([^\x27" ]*)[\x27"]?.*/\1/'``
+  if [ "`$ROLES_PATH" != "" ]; then
+    ROLES_PATH_FIXED="`$ROLES_PATH"
+    pathfixer ROLES_PATH_FIXED `$ROLES_PATH_FIXED 
+    if [ "`$ROLES_PATH" != "`$ROLES_PATH_FIXED" ]; then
+      PARAMS=`${PARAMS//`$ROLES_PATH/`$ROLES_PATH_FIXED}
+    fi
+  fi  
+fi
+
 # regex your user path to UNIX style path otherwise ansible fails
 PARAMS_LINUX=`${PARAMS//~}
+
 echo "pwd = ``pwd``"
 echo "{{CMD_PATH}} `$PARAMS_LINUX"
 {{CMD_PATH}} `$PARAMS_LINUX
