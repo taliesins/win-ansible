@@ -1,3 +1,4 @@
+FIREWALL_CERTIFICATE_PATH=/cygdrive/g/PortalDevelopers/Firewall.pem
 ANSIBLE=/opt/ansible
 PATH=/bin:$PATH:$ANSIBLE/bin
 PYTHONPATH=$ANSIBLE/lib:
@@ -15,7 +16,9 @@ echo 'C_INCLUDE_PATH=/usr/include:/usr/include/python2.7:$C_INCLUDE_PATH' >> ~/.
 echo 'C_PLUS_INCLUDE_PATH=/usr/include:/usr/include/python2.7:$C_PLUS_INCLUDE_PATH' >> ~/.bashrc
 echo 'LIBRARY_PATH=/usr/lib:$LIBRARY_PATH' >> ~/.bashrc
 echo 'LD_LIBRARY_PATH=/usr/lib:$LD_LIBRARY_PATH' >> ~/.bashrc
-cp /cygdrive/g/PortalDevelopers/Firewall.pem /etc/pki/ca-trust/source/anchors/firewall.pem
+if [ -f $FIREWALL_CERTIFICATE_PATH ]; then
+  cp $FIREWALL_CERTIFICATE_PATH /etc/pki/ca-trust/source/anchors/firewall.pem
+fi
 update-ca-trust
 mkdir -p ~/.pip
 echo "[global]" > ~/.pip/pip.conf
