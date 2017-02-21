@@ -63,6 +63,7 @@ LIBRARY_PATH=/usr/lib:`$LIBRARY_PATH
 LD_LIBRARY_PATH=/usr/lib:`$LD_LIBRARY_PATH
 
 cd ``cygpath `$1 -a``
+echo "cd ``pwd``"
 shift
 
 WINDOWS_HOME_PATH="cygpath ~ -w"
@@ -104,7 +105,8 @@ pathfixer(){
 if [ "`$ANSIBLE_SSH_ARGS" != "" ]; then
   ANSIBLE_SSH_ARGS=``echo `$ANSIBLE_SSH_ARGS | sed -E "s|ControlMaster=([^ ]*)|ControlMaster=no|"``
   ANSIBLE_SSH_ARGS=``echo `$ANSIBLE_SSH_ARGS | sed -E "s|-o ControlPersist=([^ ]*)||"``
-  export ANSIBLE_SSH_ARGS=`$ANSIBLE_SSH_ARGS
+  export ANSIBLE_SSH_ARGS="`$ANSIBLE_SSH_ARGS"
+  echo "export ANSIBLE_SSH_ARGS=\"`$ANSIBLE_SSH_ARGS\""
 fi
 
 # Fix environment variable path set by vagrant on Windows
@@ -113,6 +115,7 @@ if [ "`$ANSIBLE_ROLES_PATH" != "" ]; then
     pathfixer ANSIBLE_ROLES_PATH_FIXED `$ANSIBLE_ROLES_PATH_FIXED
     if [ "`$ANSIBLE_ROLES_PATH" != "`$ANSIBLE_ROLES_PATH_FIXED" ]; then
       export ANSIBLE_ROLES_PATH="`$ANSIBLE_ROLES_PATH_FIXED"
+      echo "export ANSIBLE_ROLES_PATH=\"`$ANSIBLE_ROLES_PATH_FIXED\""
     fi
 fi
 
@@ -121,6 +124,7 @@ if [ "`$ANSIBLE_CONFIG" != "" ]; then
     pathfixer ANSIBLE_CONFIG_FIXED `$ANSIBLE_CONFIG_FIXED
     if [ "`$ANSIBLE_CONFIG" != "`$ANSIBLE_CONFIG_FIXED" ]; then
       export ANSIBLE_CONFIG="`$ANSIBLE_CONFIG_FIXED"
+      echo "export ANSIBLE_CONFIG=\"`$ANSIBLE_CONFIG_FIXED\""
     fi
 fi
 
@@ -130,6 +134,9 @@ if [[ `$PARAMS == *"inventory-file"* ]]; then
   if [ "`$INVENTORY_FILE" != "" ]; then
     INVENTORY_FILE_FIXED="`$INVENTORY_FILE"
     pathfixer INVENTORY_FILE_FIXED `$INVENTORY_FILE_FIXED
+    if [ -f "`$INVENTORY_FILE_FIXED/vagrant_ansible_inventory" ]; then
+      INVENTORY_FILE_FIXED="`$INVENTORY_FILE_FIXED/vagrant_ansible_inventory"
+    fi
     if [ "`$INVENTORY_FILE" != "`$INVENTORY_FILE_FIXED" ]; then
       PARAMS=`${PARAMS//`$INVENTORY_FILE/`$INVENTORY_FILE_FIXED}
     fi
@@ -160,10 +167,20 @@ if [[ `$PARAMS == *"roles-path"* ]]; then
   fi  
 fi
 
+if [[ `$PARAMS == *"private-key"* ]]; then
+  PRIVATE_KEY=``echo `$PARAMS | sed -E 's/.*--private-key\s*=\s*[\x27"]?([^\x27" ]*)[\x27"]?.*/\1/'``
+  if [ "`$PRIVATE_KEY" != "" ]; then
+    PRIVATE_KEY_FIXED="`$PRIVATE_KEY"
+    pathfixer PRIVATE_KEY_FIXED `$PRIVATE_KEY_FIXED 
+    if [ "`$PRIVATE_KEY" != "`$PRIVATE_KEY_FIXED" ]; then
+      PARAMS=`${PARAMS//`$PRIVATE_KEY/`$PRIVATE_KEY_FIXED}
+    fi
+  fi
+fi
+
 # regex your user path to UNIX style path otherwise ansible fails
 PARAMS_LINUX=`${PARAMS//~}
 
-echo "pwd = ``pwd``"
 echo "{{CMD_PATH}} `$PARAMS_LINUX"
 {{CMD_PATH}} `$PARAMS_LINUX
 "@
