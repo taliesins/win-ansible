@@ -35,6 +35,8 @@ if ($p.ExitCode -ne 0) {
    Write-Error "Cygwin setup failed with an error!"
 }
 
+&$rootPath\bin\bash.exe $scriptPath\apt-cyg.sh
+
 &$rootPath\bin\bash.exe $scriptPath\ansible.sh 
 
 $shim=@"
