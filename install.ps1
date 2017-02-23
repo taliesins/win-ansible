@@ -46,9 +46,9 @@ set SH=%CYGWIN%\bin\bash.exe
 
 REM Ugly quotations support patch
 set v_params=%*
-set v_params=%v_params:"--=--%
-set v_params=%v_params:"}"="}%
-set v_params=%v_params:"=\\\"%
+REM set v_params=%v_params:"--=--%
+REM set v_params=%v_params:"}"="}%
+REM set v_params=%v_params:"=\\\"%
 
 "%SH%" -c "{{CMD_PATH}} '%cd%' %v_params%"
 "@
@@ -70,6 +70,7 @@ shift
 
 WINDOWS_HOME_PATH="cygpath ~ -w"
 PARAMS="`$@"
+echo "original parameters=`$PARAMS"
 
 pathfixer(){
   if [ "`$2" == "" ]; then
@@ -132,7 +133,13 @@ fi
 
 # Fix parameters passed by vagrant on Windows
 if [[ `$PARAMS == *"inventory-file"* ]]; then
-  INVENTORY_FILE=``echo `$PARAMS | sed -E 's/.*--inventory-file\s*=\s*[\x27"]?([^\x27" ]*)[\x27"]?.*/\1/'``
+  INVENTORY_FILE=``echo `$PARAMS | sed -E 's/.*--inventory-file[ ]*=[ ]*["]([^"]+)["].*/\1/'``
+  if [ "`$INVENTORY_FILE" != "" ]; then
+     INVENTORY_FILE=``echo `$PARAMS | sed -E 's/.*--inventory-file[ ]*=[ ]*\x27([^\x27]+)\x27.*/\1/'``
+  fi
+  if [ "`$INVENTORY_FILE" != "" ]; then
+     INVENTORY_FILE=``echo `$PARAMS | sed -E 's/.*--inventory-file[ ]*=[ ]*([^ ]+).*/\1/'``
+  fi
   if [ "`$INVENTORY_FILE" != "" ]; then
     INVENTORY_FILE_FIXED="`$INVENTORY_FILE"
     pathfixer INVENTORY_FILE_FIXED `$INVENTORY_FILE_FIXED
@@ -140,41 +147,65 @@ if [[ `$PARAMS == *"inventory-file"* ]]; then
       INVENTORY_FILE_FIXED="`$INVENTORY_FILE_FIXED/vagrant_ansible_inventory"
     fi
     if [ "`$INVENTORY_FILE" != "`$INVENTORY_FILE_FIXED" ]; then
+      echo "INVENTORY_FILE=`$INVENTORY_FILE"
+      echo "INVENTORY_FILE_FIXED=`$INVENTORY_FILE_FIXED"
       PARAMS=`${PARAMS//`$INVENTORY_FILE/`$INVENTORY_FILE_FIXED}
     fi
   fi
 fi
 
 if [[ `$PARAMS == *"role-file"* ]]; then
-  ROLE_FILE=``echo `$PARAMS | sed -E 's/.*--role-file\s*=\s*[\x27"]?([^\x27" ]*)[\x27"]?.*/\1/'``
+  ROLE_FILE=``echo `$PARAMS | sed -E 's/.*--role-file[ ]*=[ ]*["]([^"]+)["].*/\1/'``
+  if [ "`$ROLE_FILE" != "" ]; then
+     ROLE_FILE=``echo `$PARAMS | sed -E 's/.*--role-file[ ]*=[ ]*\x27([^\x27]+)\x27.*/\1/'``
+  fi
+  if [ "`$ROLE_FILE" != "" ]; then
+     ROLE_FILE=``echo `$PARAMS | sed -E 's/.*--role-file[ ]*=[ ]*([^ ]+).*/\1/'``
+  fi
   if [ "`$ROLE_FILE" != "" ]; then
     ROLE_FILE_FIXED="`$ROLE_FILE"
     pathfixer ROLE_FILE_FIXED `$ROLE_FILE_FIXED
-    echo "ROLE_FILE=`$ROLE_FILE"
-    echo "ROLE_FILE_FIXED=`$ROLE_FILE_FIXED"
     if [ "`$ROLE_FILE" != "`$ROLE_FILE_FIXED" ]; then
+      echo "ROLE_FILE=`$ROLE_FILE"
+      echo "ROLE_FILE_FIXED=`$ROLE_FILE_FIXED"
       PARAMS=`${PARAMS//`$ROLE_FILE/`$ROLE_FILE_FIXED}
     fi
   fi  
 fi
 
-if [[ `$PARAMS == *"roles-path"* ]]; then
-  ROLES_PATH=``echo `$PARAMS | sed -E 's/.*--roles-path\s*=\s*[\x27"]?([^\x27" ]*)[\x27"]?.*/\1/'``
+if [[ `$PARAMS == *"roles-path"* ]]; then  
+  ROLES_PATH=``echo `$PARAMS | sed -E 's/.*--roles-path[ ]*=[ ]*["]([^"]+)["].*/\1/'``
+  if [ "`$ROLES_PATH" != "" ]; then
+     ROLES_PATH=``echo `$PARAMS | sed -E 's/.*--roles-path[ ]*=[ ]*\x27([^\x27]+)\x27.*/\1/'``
+  fi
+  if [ "`$ROLES_PATH" != "" ]; then
+     ROLES_PATH=``echo `$PARAMS | sed -E 's/.*--roles-path[ ]*=[ ]*([^ ]+).*/\1/'``
+  fi  
   if [ "`$ROLES_PATH" != "" ]; then
     ROLES_PATH_FIXED="`$ROLES_PATH"
     pathfixer ROLES_PATH_FIXED `$ROLES_PATH_FIXED 
     if [ "`$ROLES_PATH" != "`$ROLES_PATH_FIXED" ]; then
+      echo "ROLES_PATH=`$ROLES_PATH"
+      echo "ROLES_PATH_FIXED=`$ROLES_PATH_FIXED"
       PARAMS=`${PARAMS//`$ROLES_PATH/`$ROLES_PATH_FIXED}
     fi
   fi  
 fi
 
 if [[ `$PARAMS == *"private-key"* ]]; then
-  PRIVATE_KEY=``echo `$PARAMS | sed -E 's/.*--private-key\s*=\s*[\x27"]?([^\x27" ]*)[\x27"]?.*/\1/'``
+  PRIVATE_KEY=``echo `$PARAMS | sed -E 's/.*--private-key[ ]*=[ ]*["]([^"]+)["].*/\1/'``
+  if [ "`$PRIVATE_KEY" != "" ]; then
+     PRIVATE_KEY=``echo `$PARAMS | sed -E 's/.*--private-key[ ]*=[ ]*\x27([^\x27]+)\x27.*/\1/'``
+  fi
+  if [ "`$PRIVATE_KEY" != "" ]; then
+     PRIVATE_KEY=``echo `$PARAMS | sed -E 's/.*--private-key[ ]*=[ ]*([^ ]+).*/\1/'``
+  fi
   if [ "`$PRIVATE_KEY" != "" ]; then
     PRIVATE_KEY_FIXED="`$PRIVATE_KEY"
     pathfixer PRIVATE_KEY_FIXED `$PRIVATE_KEY_FIXED 
     if [ "`$PRIVATE_KEY" != "`$PRIVATE_KEY_FIXED" ]; then
+      echo "PRIVATE_KEY=`$PRIVATE_KEY"
+      echo "PRIVATE_KEY_FIXED=`$PRIVATE_KEY_FIXED"
       PARAMS=`${PARAMS//`$PRIVATE_KEY/`$PRIVATE_KEY_FIXED}
     fi
   fi
