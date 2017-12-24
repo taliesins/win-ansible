@@ -225,11 +225,11 @@ mkdir -f $rootPath\shim
 "ansible", "ansible-console", "ansible-doc", "ansible-galaxy", "ansible-playbook", "ansible-pull", "ansible-vault" | %{
 	$command = $_
 	
-	$commandShim = $shim.Replace("{{CMD_PATH}}", "/usr/local/bin/winpath-$($command).sh")
+	$commandShim = $shim.Replace("{{CMD_PATH}}", "/usr/local/bin/winpath-$($command).sh").Replace("`r`n","`n")
 	$commandShimPath = "$rootPath\shim\$($command).bat"
 	[IO.File]::WriteAllText($commandShimPath, $commandShim)	
 
-	$winPathCommandShim = $winShim.Replace("{{CMD_PATH}}", "/bin/$command")
+	$winPathCommandShim = $winShim.Replace("{{CMD_PATH}}", "/bin/$command").Replace("`r`n","`n")
 	$winPathCommandShimPath = "$rootPath\usr\local\bin\winpath-$($command).sh"
 	[IO.File]::WriteAllText($winPathCommandShimPath, $winPathCommandShim)	
 }
