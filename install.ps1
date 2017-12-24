@@ -26,7 +26,7 @@ if (!(Test-Path $cygWinPath)){
 	$client.DownloadFile($cygWinUrl, $cygWinPath)
 }
 
-$arguments = "--quiet-mode  --no-admin --no-desktop --no-shortcuts --no-startmenu --disable-buggy-antivirus --site $mirrorUrl --root $rootPath --local-package-dir $packagesPath --packages coreutils,libattr1,inutils,curl,libgmp-devel,make,python-devel,python-crypto,python-openssl,python-setuptools,nano,openssl,openssl-devel,libffi-devel,wget,gcc-g++,make,diffutils,libmpfr-devel,libmpc-devel,git,openssh,libkrb5-devel,krb5-workstation"
+$arguments = "--quiet-mode  --no-admin --no-desktop --no-shortcuts --no-startmenu --disable-buggy-antivirus --site $mirrorUrl --root $rootPath --local-package-dir $packagesPath --packages coreutils,libattr1,inutils,curl,libgmp-devel,make,python-devel,python-crypto,python-openssl,python-setuptools,nano,openssl,openssl-devel,libffi-devel,wget,gcc-g++,make,diffutils,libmpfr-devel,libmpc-devel,git,openssh,libkrb5-devel,krb5-workstation,libsodium-devel"
 Write-Host "install cygwin with: $arguments"
 
 $p = Start-Process -Wait -NoNewWindow -PassThru -FilePath $cygWinPath -ArgumentList $arguments
@@ -35,9 +35,11 @@ if ($p.ExitCode -ne 0) {
    Write-Error "Cygwin setup failed with an error!"
 }
 
-&$rootPath\bin\bash.exe $scriptPath\apt-cyg.sh
+$env:Path = "$rootPath\bin;$($env:Path)"
 
-&$rootPath\bin\bash.exe $scriptPath\ansible.sh 
+&bash $scriptPath\apt-cyg.sh
+
+&bash $scriptPath\ansible.sh 
 
 $shim=@"
 @echo off
