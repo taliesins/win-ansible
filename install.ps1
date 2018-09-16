@@ -55,6 +55,11 @@ REM set v_params=%v_params:"=\\\"%
 "%SH%" -c "{{CMD_PATH}} '%cd%' %v_params%"
 "@
 
+$bashShim=@"
+#!/bin/bash
+{{SHIM_PATH}} "$@"
+"@
+
 $winShim=@"
 #!/bin/bash
 ANSIBLE=/opt/ansible
@@ -228,6 +233,10 @@ mkdir -f $rootPath\shim
 	$commandShim = $shim.Replace("{{CMD_PATH}}", "/usr/local/bin/winpath-$($command).sh").Replace("`r`n","`n")
 	$commandShimPath = "$rootPath\shim\$($command).bat"
 	[IO.File]::WriteAllText($commandShimPath, $commandShim)	
+
+	$bashShim = $bashShim.Replace("{{SHIM_PATH}}", "$($command).bat").Replace("`r`n","`n")
+	$bashShimPath = "$rootPath\shim\$($command)"
+	[IO.File]::WriteAllText($bashShimPath, $bashShim)	
 
 	$winPathCommandShim = $winShim.Replace("{{CMD_PATH}}", "/bin/$command").Replace("`r`n","`n")
 	$winPathCommandShimPath = "$rootPath\usr\local\bin\winpath-$($command).sh"
